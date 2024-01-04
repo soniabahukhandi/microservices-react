@@ -1,0 +1,25 @@
+#Start with a base image containing Java runtime
+FROM eclipse-temurin:21.0.1_12-jre-jammy as build
+ARG JAR_FILE=target/*.jar
+#Start with a base image containing Java runtime
+COPY ${JAR_FILE} app.jar
+
+#unpack the jar file
+RUN mkdir -p target/dependency && 
+ (cd target/dependency; jar -xf /app.jar)
+
+#stage 2 
+FROM eclipse-temurin:21.0.1_12-jre-jammy
+
+#Add volume pointing to /tmp
+VOLUME /tmp
+
+#Copy unpackaged application to new container 
+
+ARG DEPENDENCY=/target/dependency
+COPY --from=build ${DEPENDENCY}/BOOT-INF/lib /app/lib
+COPY --from=build ${DEPENDENCY}/META-INF /app/META-INF
+COPY --from=build ${DEPENDENCY}/BOOT-INF/classes /app
+
+#execute the application
+ENTRYPOINT ["java","-cp","app:app/lib/*", "com.samsunggrowth.configserver.ConfigServerApplication"]
